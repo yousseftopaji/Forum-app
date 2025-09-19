@@ -11,7 +11,7 @@ public class CliApp
     private readonly IPostRepository _postRepository;
     private readonly ICommentRepository _commentRepository;
 
-    
+
     public CliApp(IUserRepository userRepository, IPostRepository postRepository, ICommentRepository commentRepository)
     {
         _userRepository = userRepository;
@@ -19,7 +19,7 @@ public class CliApp
         _commentRepository = commentRepository;
     }
 
-    
+
     public async Task StartAsync()
     {
         Console.WriteLine("CLI started, ready to accept commands.");
@@ -40,17 +40,36 @@ public class CliApp
                     User? user = await loginView.ShowAsync();
                     if (user != null)
                     {
-                        var mainView = new MainView(_userRepository, _postRepository, _commentRepository, user); 
+                        var mainView = new MainView(_userRepository, _postRepository, _commentRepository, user);
                         await mainView.ShowAsync();
                     }
+                    else
+                    {
+                        Console.WriteLine("Login failed. Please try again.");
+                    }
                     break;
+
                 case "2":
                     var createUserView = new CreateUserView(_userRepository);
-                    await createUserView.ShowAsync();
-                    
+                    User? newUser = await createUserView.ShowAsync();
+
+                    if (newUser != null)
+                    {
+                        MainView mainViewAfterRegister = new(_userRepository, _postRepository, _commentRepository, newUser);
+                        await mainViewAfterRegister.ShowAsync();
+                    }
+                    else
+                    {
+                        Console.WriteLine("User registration failed.");
+                    }
                     break;
+
                 case "0":
                     Console.WriteLine("Exiting application. Goodbye!");
+                    break;
+
+                default:
+                    Console.WriteLine("Invalid option. Please try again.");
                     break;
             }
             if (input == "0") break;

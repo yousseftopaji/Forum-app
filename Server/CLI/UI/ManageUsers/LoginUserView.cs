@@ -11,7 +11,7 @@ public class LoginUserView
     {
         _userRepository = userRepository;
     }
-    
+
     public async Task<User?> ShowAsync()
     {
         Console.Write("Enter username: ");
@@ -25,6 +25,7 @@ public class LoginUserView
         if (user != null)
         {
             Console.WriteLine("Login successful!");
+            await Task.CompletedTask;
             return user;
         }
         else
