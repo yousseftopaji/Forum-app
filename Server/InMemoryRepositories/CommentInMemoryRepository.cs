@@ -5,67 +5,76 @@ namespace InMemoryRepositories;
 
 public class CommentInMemoryRepository : ICommentRepository
 {
-    private List<Comment> comments;
+    private readonly List<Comment> _comments = [];
     
     public CommentInMemoryRepository()
     {
-        comments = GetDummyComments();
+        SeedDataAsync().GetAwaiter();
     }
     
-    private List<Comment>? GetDummyComments()
-    {
-        return
-        [
-            new Comment { Body = "Comment 1", PostId = 1, Id = 1, UserId = 2},
-            new Comment { Body = "Comment 2", PostId = 2, Id = 2, UserId = 1},
-            new Comment { Body = "Comment 3", PostId = 3, Id = 3, UserId = 3}
-        ];
-    }
-
     public Task<Comment> AddAsync(Comment comment)
     {
-        comment.Id = comments.Any() ? comments.Max(c => c.Id) + 1 : 1;
-        comments.Add(comment);
+        comment.Id = _comments.Count != 0 ? _comments.Max(c => c.Id) + 1 : 1;
+        _comments.Add(comment);
         return Task.FromResult(comment);
     }
 
     public Task UpdateAsync(Comment comment)
     {
-        Comment? oldComment = comments.SingleOrDefault(c => c.Id == comment.Id);
+        Comment? oldComment = _comments.SingleOrDefault(c => c.Id == comment.Id);
         if (oldComment is null)
         {
             throw new InvalidOperationException($"Comment with id {comment.Id} not found");
         }
 
-        comments.Remove(oldComment);
-        comments.Add(comment);
+        _comments.Remove(oldComment);
+        _comments.Add(comment);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(int id)
     {
-        Comment? comment = comments.SingleOrDefault(c => c.Id == id);
-        if (comment is null)
-        {
-            throw new InvalidOperationException($"Comment with id {id} not found");
-        }
-        comments.Remove(comment);
+        var comment = _comments.SingleOrDefault(c => c.Id == id) ?? throw new InvalidOperationException($"Comment with ID '{id}' not found.");
+        _comments.Remove(comment);
         return Task.CompletedTask;
     }
 
     public Task<Comment> GetSingleAsync(int id)
     {
-        Comment? comment = comments.SingleOrDefault(c => c.Id == id);
-        if (comment is null)
-        {
-            throw new InvalidOperationException($"Comment with id {id} not found");
-        }
-        
+        var comment = _comments.SingleOrDefault(c => c.Id == id) ?? throw new InvalidOperationException($"Comment with id {id} not found");
         return Task.FromResult(comment);
     }
 
     public IQueryable<Comment> GetManyAsync()
     {
-        return comments.AsQueryable();
+        return _comments.AsQueryable();
+    }
+    
+    private async Task SeedDataAsync()
+    {
+        Comment comment1 = new()
+        {
+            Id = 1,
+            Body = "comment1",
+            PostId = 1,
+            UserId = 1,
+        };
+        Comment comment2 = new()
+        {
+            Id = 2,
+            Body = "comment2",
+            PostId = 2,
+            UserId = 2,
+        };
+        Comment comment3 = new()
+        {
+            Id = 3,
+            Body = "comment3",
+            PostId = 2,
+            UserId = 2,
+        };
+        await AddAsync(comment1);
+        await AddAsync(comment2);
+        await AddAsync(comment3);
     }
 }
