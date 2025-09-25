@@ -5,23 +5,44 @@ namespace InMemoryRepositories;
 
 public class PostInMemoryRepository : IPostRepository
 {
-    private List<Post> posts;
-    
+    private readonly List<Post> posts = [];
+
     public PostInMemoryRepository()
     {
-        posts = GetDummyPosts();
+        SeedDataAsync().GetAwaiter();
     }
-    
-    private List<Post>? GetDummyPosts()
+
+    private async Task SeedDataAsync()
     {
-        return
-        [
-            new Post { Title = "Post 1", Body = "Content 1", Id = 1, UserId = 2 },
-            new Post { Title = "Post 2", Body = "Content 2", Id = 2, UserId = 1 },
-            new Post { Title = "Post 3", Body = "Content 3", Id = 3, UserId = 3 }
-        ];
+
+        Post post1 = new()
+        {
+            Id = 1,
+            Title = "Post 1",
+            Body = "Content 1",
+            UserId = 2
+        };
+        Post post2 = new()
+        {
+            Id = 2,
+            Title = "Post 2",
+            Body = "Content 2",
+            UserId = 1
+        };
+        Post post3 = new()
+        {
+            Id = 3,
+            Title = "Post 3",
+            Body = "Content 3",
+            UserId = 3
+        };
+
+        await AddAsync(post1);
+        await AddAsync(post2);
+        await AddAsync(post3);
     }
     
+
     public Task<Post> AddAsync(Post post)
     {
         post.Id = posts.Any() ? posts.Max(p => p.Id) + 1 : 1;
@@ -47,9 +68,9 @@ public class PostInMemoryRepository : IPostRepository
         Post? postToRemove = posts.SingleOrDefault(p => p.Id == id);
         if (postToRemove is null)
         {
-            throw new InvalidOperationException($"Post with id '{id}' not found"); 
+            throw new InvalidOperationException($"Post with id '{id}' not found");
         }
-        
+
         posts.Remove(postToRemove);
         return Task.CompletedTask;
     }
