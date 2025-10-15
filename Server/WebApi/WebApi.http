@@ -1,6 +1,45 @@
 @WebApi_HostAddress = http://localhost:5135
 
-GET {{WebApi_HostAddress}}/weatherforecast/
+GET {{WebApi_HostAddress}}/users
 Accept: application/json
 
 ###
+
+POST {{WebApi_HostAddress}}/users
+Content-Type: application/json
+
+{
+  "username": "newuser2",
+  "password": "password123"
+}
+
+###
+
+GET {{WebApi_HostAddress}}/posts
+Accept: application/json
+
+###
+
+POST {{WebApi_HostAddress}}/posts
+Content-Type: application/json
+
+{
+  "title": "New Post Title",
+  "body": "This is the content of the new post.",
+  "authorUserId": "1"
+}
+
+###
+
+GET {{WebApi_HostAddress}}/users/1/posts/1
+Accept: application/json
+
+###
+
+PATCH {{WebApi_HostAddress}}/posts/1
+Content-Type: application/json
+
+{
+  "title": "Updated Post Title",
+  "body": "This is the updated content of the post."
+}

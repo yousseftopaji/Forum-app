@@ -22,23 +22,30 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserDTO>> AddUser([FromBody] CreateUserDTO request)
     {
         // Check if username already exists
-        await VerifyUsernameIsUnique(request.Username);
-        User user = new()
+        try
         {
-            Username = request.Username,
-            Password = request.Password
-        };
+            await VerifyUsernameIsUnique(request.Username);
+            User user = new()
+            {
+                Username = request.Username,
+                Password = request.Password
+            };
 
-        User created = await userRepository.AddAsync(user);
-        UserDTO userDTO = new()
+            User created = await userRepository.AddAsync(user);
+            UserDTO userDTO = new()
+            {
+                Username = created.Username,
+                Password = created.Password
+            };
+            return Created($"/users/{created.Id}", userDTO);
+        }
+        catch (ArgumentException ex)
         {
-            Username = created.Username,
-            Password = created.Password
-        };
-        return Created($"/users/{created.Id}", userDTO);
+            return StatusCode(409, ex.Message);
+        }
     }
 
-    private async Task VerifyUsernameIsUnique(string username)
+    private Task VerifyUsernameIsUnique(string username)
     {
         var existingUser = userRepository.GetManyAsync()
             .FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
@@ -47,6 +54,8 @@ public class UsersController : ControllerBase
         {
             throw new ArgumentException("Username already exists");
         }
+
+        return Task.CompletedTask;
     }
 
     [HttpPatch("{id:int}")]
@@ -108,8 +117,29 @@ public class UsersController : ControllerBase
         var posts = postRepository.GetManyAsync()
             .Where(p => p.UserId == userId)
             .ToList();
-            
+
         return Results.Ok(posts);
+    }
+
+    [HttpGet("{userId:int}/posts/{postId:int}")]
+    public async Task<IResult> GetUserPost([FromRoute] int userId, [FromRoute] int postId)
+    {
+        // Check if user exists
+        var user = await userRepository.GetSingleAsync(userId);
+        if (user == null)
+        {
+            return Results.NotFound($"User with ID {userId} not found");
+        }
+
+        var post = postRepository.GetManyAsync()
+            .FirstOrDefault(p => p.Id == postId && p.UserId == userId);
+
+        if (post == null)
+        {
+            return Results.NotFound($"Post with ID {postId} not found for user {userId}");
+        }
+
+        return Results.Ok(post);
     }
 
     [HttpDelete("{id:int}")]
