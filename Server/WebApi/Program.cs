@@ -6,7 +6,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Add services to the container.
-// Remove Swagger due to compatibility issues with .NET 10.0 preview
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<IPostRepository, PostInFileRepository>();
 builder.Services.AddScoped<IUserRepository, UserInFileRepository>();
@@ -17,7 +18,11 @@ var app = builder.Build();
 app.MapControllers();
 
 // Configure the HTTP request pipeline.
-// Remove Swagger code due to compatibility issues with .NET 10.0 preview
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
 
