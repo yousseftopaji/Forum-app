@@ -44,6 +44,7 @@ public class PostsController : ControllerBase
         Post created = await postRepository.AddAsync(post);
         PostDTO postDTO = new()
         {
+            Id = created.Id,
             Title = created.Title,
             Body = created.Body,
             UserId = created.UserId
@@ -81,17 +82,26 @@ public class PostsController : ControllerBase
         {
             return Results.NotFound();
         }
-        return Results.Ok(post);
+
+        // Map to DTO
+        PostDTO postDTO = new()
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Body = post.Body,
+            UserId = post.UserId
+        };
+        return Results.Ok(postDTO);
     }
 
     [HttpGet]
-    public IResult GetPosts(
+    public async Task<IResult> GetPosts(
         [FromQuery] string? titleContains = null,
         [FromQuery] string? body = null,
         [FromQuery] string? authorUserId = null
     )
     {
-        var postsToQuery = postRepository.GetManyAsync();
+        var postsToQuery = await postRepository.GetManyAsync();
 
         if (!string.IsNullOrWhiteSpace(titleContains))
         {
@@ -112,7 +122,18 @@ public class PostsController : ControllerBase
             postsToQuery = postsToQuery.Where(p => p.UserId == userId);
         }
 
-        return Results.Ok(postsToQuery.ToList());
+        var postsList = postsToQuery.ToList();
+
+        // Map to DTOs
+        var postDTOs = postsList.Select(p => new PostDTO
+        {
+            Id = p.Id,
+            Title = p.Title,
+            Body = p.Body,
+            UserId = p.UserId
+        }).ToList();
+
+        return Results.Ok(postDTOs);
     }
 
     // Get comments for a specific post
@@ -126,11 +147,21 @@ public class PostsController : ControllerBase
             return Results.NotFound($"Post with ID {postId} not found");
         }
 
-        var comments = commentRepository.GetManyAsync()
+        var commentsQuery = await commentRepository.GetManyAsync();
+        var comments = commentsQuery
             .Where(c => c.PostId == postId)
             .ToList();
 
-        return Results.Ok(comments);
+        // Map to DTOs
+        var commentDTOs = comments.Select(c => new CommentDTO
+        {
+            Id = c.Id,
+            Body = c.Body,
+            PostId = c.PostId,
+            UserId = c.UserId
+        }).ToList();
+
+        return Results.Ok(commentDTOs);
     }
 
     // Add a comment to a specific post
@@ -154,7 +185,17 @@ public class PostsController : ControllerBase
         };
 
         Comment created = await commentRepository.AddAsync(comment);
-        return Results.Created($"/posts/{postId}/comments/{created.Id}", created);
+
+        // Map to DTO
+        CommentDTO commentDTO = new()
+        {
+            Id = created.Id,
+            Body = created.Body,
+            PostId = created.PostId,
+            UserId = created.UserId
+        };
+
+        return Results.Created($"/posts/{postId}/comments/{created.Id}", commentDTO);
     }
 
     [HttpDelete("{id:int}")]

@@ -45,9 +45,10 @@ public class PostInFileRepository : IPostRepository
         await SavePostsAsync(posts);
     }
 
-    public IQueryable<Post> GetManyAsync()
+    public async Task<IQueryable<Post>> GetManyAsync()
     {
-        return GetPostsAsync().Result.AsQueryable();
+        List<Post> posts = await GetPostsAsync();
+        return posts.AsQueryable();
     }       
 
     public async Task<Post> GetSingleAsync(int id)

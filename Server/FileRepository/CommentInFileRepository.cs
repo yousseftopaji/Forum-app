@@ -46,9 +46,10 @@ public class CommentInFileRepository : ICommentRepository
         await SaveCommentsAsync(comments);
     }
 
-    public IQueryable<Comment> GetManyAsync()
+    public async Task<IQueryable<Comment>> GetManyAsync()
     {
-        return GetCommentsAsync().Result.AsQueryable();
+        List<Comment> comments = await GetCommentsAsync();
+        return comments.AsQueryable();
     }
 
     public async Task<Comment> GetSingleAsync(int id)

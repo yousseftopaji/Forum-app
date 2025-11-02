@@ -45,9 +45,10 @@ public class UserInFileRepository : IUserRepository
         await SaveUsersAsync(users);
     }
 
-    public IQueryable<User> GetManyAsync()
+    public async Task<IQueryable<User>> GetManyAsync()
     {
-        return GetUsersAsync().Result.AsQueryable();
+        List<User> users = await GetUsersAsync();
+        return users.AsQueryable();
     }
 
     public async Task<User> GetSingleAsync(int id)

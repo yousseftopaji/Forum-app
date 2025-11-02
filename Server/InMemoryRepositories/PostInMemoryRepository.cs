@@ -81,8 +81,8 @@ public class PostInMemoryRepository : IPostRepository
         return post is null ? throw new InvalidOperationException($"Post with id '{id}' not found") : Task.FromResult(post);
     }
 
-    public IQueryable<Post> GetManyAsync()
+    public Task<IQueryable<Post>> GetManyAsync()
     {
-        return posts.AsQueryable();
+        return Task.FromResult(posts.AsQueryable());
     }
 }

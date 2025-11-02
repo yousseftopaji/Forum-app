@@ -38,7 +38,17 @@ public class CommentsController : ControllerBase
         };
 
         Comment created = await commentRepository.AddAsync(comment);
-        return Results.Created($"/comments/{created.Id}", created);
+
+        // Map to DTO
+        CommentDTO commentDTO = new()
+        {
+            Id = created.Id,
+            Body = created.Body,
+            PostId = created.PostId,
+            UserId = created.UserId
+        };
+
+        return Results.Created($"/comments/{created.Id}", commentDTO);
     }
 
     [HttpPatch("{id:int}")]
@@ -102,16 +112,26 @@ public class CommentsController : ControllerBase
         {
             return Results.NotFound();
         }
-        return Results.Ok(comment);
+
+        // Map to DTO
+        CommentDTO commentDTO = new()
+        {
+            Id = comment.Id,
+            Body = comment.Body,
+            PostId = comment.PostId,
+            UserId = comment.UserId
+        };
+
+        return Results.Ok(commentDTO);
     }
 
     [HttpGet]
-    public IResult GetAllComments(
+    public async Task<IResult> GetAllComments(
         [FromQuery] int? PostId = null,
         [FromQuery] int? UserId = null
     )
     {
-        var comments = commentRepository.GetManyAsync();
+        var comments = await commentRepository.GetManyAsync();
 
         if (PostId.HasValue)
         {
@@ -123,7 +143,18 @@ public class CommentsController : ControllerBase
             comments = comments.Where(c => c.UserId == UserId.Value);
         }
 
-        return Results.Ok(comments.ToList());
+        var commentsList = comments.ToList();
+
+        // Map to DTOs
+        var commentDTOs = commentsList.Select(c => new CommentDTO
+        {
+            Id = c.Id,
+            Body = c.Body,
+            PostId = c.PostId,
+            UserId = c.UserId
+        }).ToList();
+
+        return Results.Ok(commentDTOs);
     }
 
     [HttpDelete("{id:int}")]
@@ -132,7 +163,7 @@ public class CommentsController : ControllerBase
         await commentRepository.DeleteAsync(id);
         return Results.NoContent();
     }
-    
+
     // Delete a comment from a specific post
     [HttpDelete("/posts/{postId}/comments/{commentId}")]
     public async Task<IResult> DeleteCommentFromPost(
