@@ -1,0 +1,152 @@
+### Variables
+@baseUrl = http://localhost:5135
+@userId = 1
+@postId = 1
+
+### 1. Create a new user (POST)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "another testuser",
+  "password": "password123"
+}
+
+### 2. Create another user for testing
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "johnsmith",
+  "password": "securepass456"
+}
+
+### 3. Get all users (GET)
+GET {{baseUrl}}/users
+
+### 4. Get users with username filter (GET with query parameter)
+GET {{baseUrl}}/users?UsernameContains=test
+
+### 5. Get user by ID (GET)
+GET {{baseUrl}}/users/{{userId}}
+
+### 6. Get user by non-existent ID (GET - should return 404)
+GET {{baseUrl}}/users/999
+
+### 7. Update user - change username (PATCH)
+PATCH {{baseUrl}}/users/{{userId}}
+Content-Type: application/json
+
+{
+  "username": "updateduser"
+}
+
+### 8. Update user - change password (PATCH)
+PATCH {{baseUrl}}/users/{{userId}}
+Content-Type: application/json
+
+{
+  "password": "newpassword789"
+}
+
+### 9. Update user - change both username and password (PATCH)
+PATCH {{baseUrl}}/users/{{userId}}
+Content-Type: application/json
+
+{
+  "username": "finalusername",
+  "password": "finalpassword"
+}
+
+### 10. Update user with duplicate username (PATCH - should return 409 Conflict)
+PATCH {{baseUrl}}/users/1
+Content-Type: application/json
+
+{
+  "username": "johnsmith"
+}
+
+### 11. Get all posts by a specific user (GET)
+GET {{baseUrl}}/users/{{userId}}/posts
+
+### 12. Get specific post by a user (GET)
+GET {{baseUrl}}/users/{{userId}}/posts/{{postId}}
+
+### 13. Get post from non-existent user (GET - should return 404)
+GET {{baseUrl}}/users/999/posts/1
+
+### 14. Get non-existent post from existing user (GET - should return 404)
+GET {{baseUrl}}/users/{{userId}}/posts/999
+
+### 15. Delete user (DELETE)
+DELETE {{baseUrl}}/users/{{userId}}
+
+### 16. Delete non-existent user (DELETE)
+DELETE {{baseUrl}}/users/999
+
+### 17. Try to create user with duplicate username (POST - should return 409 Conflict)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "johnsmith",
+  "password": "anotherpass"
+}
+
+### 18. Create a post for user 2 (POST)
+POST {{baseUrl}}/users/2/posts
+Content-Type: application/json
+
+{
+  "title": "User 2's Post",
+  "body": "This is a post created by user 2."
+}
+
+### 19. Create a comment for user 2 on post 1 (POST)
+POST {{baseUrl}}/posts/1/comments
+Content-Type: application/json
+
+{
+  "body": "This is a comment from user 2 on post 1.",
+  "postId": 1,
+  "userId": 2
+}
+
+### 20. Get all posts by user 2 (GET)
+GET {{baseUrl}}/users/2/posts
+
+### 21. Get comments for post 1 (GET)
+GET {{baseUrl}}/posts/1/comments
+
+### 22. Get comments for non-existent post (GET - should return 404)
+GET {{baseUrl}}/posts/999/comments
+
+### 23. Create comment on non-existent post (POST - should return 404)
+POST {{baseUrl}}/posts/999/comments
+Content-Type: application/json
+
+{
+  "body": "Trying to comment on a non-existent post.",
+  "postId": 999,
+  "userId": 2
+}
+
+### 24. Create comment with non-existent user (POST - should return 404)
+POST {{baseUrl}}/posts/1/comments
+Content-Type: application/json
+
+{
+  "body": "Trying to comment with a non-existent user.",
+  "postId": 1,
+  "userId": 999
+}
+
+### 25. Create comment with empty body
+POST {{baseUrl}}/posts/1/comments
+Content-Type: application/json
+
+{
+  "body": "",
+  "postId": 1,
+  "userId": 2
+}

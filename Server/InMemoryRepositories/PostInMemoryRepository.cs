@@ -55,7 +55,7 @@ public class PostInMemoryRepository : IPostRepository
         Post? existingPost = posts.SingleOrDefault(p => p.Id == post.Id);
         if (existingPost is null)
         {
-            throw new InvalidOperationException($"Post with id '{post.Id}' not found");
+            return Task.CompletedTask;
         }
 
         posts.Remove(existingPost);
@@ -68,21 +68,22 @@ public class PostInMemoryRepository : IPostRepository
         Post? postToRemove = posts.SingleOrDefault(p => p.Id == id);
         if (postToRemove is null)
         {
-            throw new InvalidOperationException($"Post with id '{id}' not found");
+            return Task.CompletedTask;
         }
 
         posts.Remove(postToRemove);
         return Task.CompletedTask;
     }
 
-    public Task<Post> GetSingleAsync(int id)
+    public Task<Post?> GetSingleAsync(int id)
     {
         Post? post = posts.SingleOrDefault(p => p.Id == id);
-        return post is null ? throw new InvalidOperationException($"Post with id '{id}' not found") : Task.FromResult(post);
+        return Task.FromResult(post);
     }
 
-    public Task<IQueryable<Post>> GetManyAsync()
+    public Task<IEnumerable<Post>> GetManyAsync()
     {
-        return Task.FromResult(posts.AsQueryable());
+        IEnumerable<Post> snapshot = posts.ToList();
+        return Task.FromResult(snapshot);
     }
 }

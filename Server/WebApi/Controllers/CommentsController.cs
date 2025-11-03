@@ -11,185 +11,237 @@ public class CommentsController : ControllerBase
 {
     private readonly ICommentRepository commentRepository;
     private readonly IPostRepository postRepository;
+    private readonly IUserRepository userRepository;
 
     public CommentsController(
         ICommentRepository commentRepository,
-        IPostRepository postRepository)
+        IPostRepository postRepository,
+        IUserRepository userRepository)
     {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
+        this.userRepository = userRepository;
     }
 
-    [HttpPost]
-    public async Task<IResult> AddComment([FromBody] CreateCommentDTO request)
+    [HttpPost("/posts/{postId:int}/comments")]
+    public async Task<ActionResult<CommentDTO>> AddComment(int postId, [FromBody] CreateCommentDTO request)
     {
-        // Verify post exists
-        var post = await postRepository.GetSingleAsync(request.PostId);
-        if (post == null)
+        try
         {
-            return Results.BadRequest($"Post with ID {request.PostId} not found");
+            var user = await userRepository.GetSingleAsync(request.UserId);
+            if (user == null)
+            {
+                return NotFound($"User with ID {request.UserId} not found");
+            }
+            
+            var post = await postRepository.GetSingleAsync(postId);
+            if (post == null)
+            {
+                return NotFound($"Post with ID {postId} not found");
+            }
+
+            Comment comment = new()
+            {
+                Body = request.Body,
+                PostId = postId,
+                UserId = request.UserId
+            };
+
+            Comment created = await commentRepository.AddAsync(comment);
+
+            CommentDTO commentDTO = new()
+            {
+                Id = created.Id,
+                Body = created.Body,
+                PostId = created.PostId,
+                UserId = created.UserId
+            };
+
+            return Created($"/comments/{created.Id}", commentDTO);
         }
-
-        Comment comment = new()
+        catch (Exception ex)
         {
-            Body = request.Body,
-            PostId = request.PostId,
-            UserId = request.UserId
-        };
-
-        Comment created = await commentRepository.AddAsync(comment);
-
-        // Map to DTO
-        CommentDTO commentDTO = new()
-        {
-            Id = created.Id,
-            Body = created.Body,
-            PostId = created.PostId,
-            UserId = created.UserId
-        };
-
-        return Results.Created($"/comments/{created.Id}", commentDTO);
+            return StatusCode(500, ex.Message);
+        }
     }
 
     [HttpPatch("{id:int}")]
-    public async Task<IResult> UpdateComment(
+    public async Task<IActionResult> UpdateComment(
         [FromRoute] int id,
         [FromBody] UpdateCommentDTO request
     )
     {
-        Comment? existing = await commentRepository.GetSingleAsync(id);
-
-        if (existing == null)
+        try
         {
-            return Results.NotFound();
+            Comment? existing = await commentRepository.GetSingleAsync(id);
+
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            existing.Body = request.Body ?? existing.Body;
+
+            await commentRepository.UpdateAsync(existing);
+
+            return NoContent();
         }
-
-        existing.Body = request.Body ?? existing.Body;
-
-        await commentRepository.UpdateAsync(existing);
-
-        return Results.NoContent();
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
     }
 
-    // Update a comment of a specific post
     [HttpPatch("/posts/{postId:int}/comments/{commentId:int}")]
-    public async Task<IResult> UpdateCommentOfPost(
+    public async Task<IActionResult> UpdateCommentOfPost(
         [FromRoute] int postId,
         [FromRoute] int commentId,
         [FromBody] UpdateCommentDTO request
     )
     {
-        // Verify post exists
-        var post = await postRepository.GetSingleAsync(postId);
-        if (post == null)
+        try
         {
-            return Results.NotFound($"Post with ID {postId} not found");
-        }
+            var post = await postRepository.GetSingleAsync(postId);
+            if (post == null)
+            {
+                return NotFound($"Post with ID {postId} not found");
+            }
 
-        Comment? existing = await commentRepository.GetSingleAsync(commentId);
-        if (existing == null)
+            Comment? existing = await commentRepository.GetSingleAsync(commentId);
+            if (existing == null)
+            {
+                return NotFound($"Comment with ID {commentId} not found");
+            }
+
+            if (existing.PostId != postId)
+            {
+                return BadRequest($"Comment with ID {commentId} does not belong to post with ID {postId}");
+            }
+
+            existing.Body = request.Body ?? existing.Body;
+            await commentRepository.UpdateAsync(existing);
+
+            return NoContent();
+        }
+        catch (Exception ex)
         {
-            return Results.NotFound($"Comment with ID {commentId} not found");
+            return StatusCode(500, ex.Message);
         }
-
-        // Verify the comment belongs to this post
-        if (existing.PostId != postId)
-        {
-            return Results.BadRequest($"Comment with ID {commentId} does not belong to post with ID {postId}");
-        }
-
-        existing.Body = request.Body ?? existing.Body;
-        await commentRepository.UpdateAsync(existing);
-
-        return Results.NoContent();
     }
 
     [HttpGet("{id:int}")]
-    public async Task<IResult> GetCommentById([FromRoute] int id)
+    public async Task<ActionResult<CommentDTO>> GetCommentById([FromRoute] int id)
     {
-        Comment? comment = await commentRepository.GetSingleAsync(id);
-        if (comment == null)
+        try
         {
-            return Results.NotFound();
+            Comment? comment = await commentRepository.GetSingleAsync(id);
+            if (comment == null)
+            {
+                return NotFound();
+            }
+
+            CommentDTO commentDTO = new()
+            {
+                Id = comment.Id,
+                Body = comment.Body,
+                PostId = comment.PostId,
+                UserId = comment.UserId
+            };
+
+            return Ok(commentDTO);
         }
-
-        // Map to DTO
-        CommentDTO commentDTO = new()
+        catch (Exception ex)
         {
-            Id = comment.Id,
-            Body = comment.Body,
-            PostId = comment.PostId,
-            UserId = comment.UserId
-        };
-
-        return Results.Ok(commentDTO);
+            return StatusCode(500, ex.Message);
+        }
     }
 
     [HttpGet]
-    public async Task<IResult> GetAllComments(
+    public async Task<ActionResult<IEnumerable<CommentDTO>>> GetAllComments(
         [FromQuery] int? PostId = null,
         [FromQuery] int? UserId = null
     )
     {
-        var comments = await commentRepository.GetManyAsync();
-
-        if (PostId.HasValue)
+        try
         {
-            comments = comments.Where(c => c.PostId == PostId.Value);
+            var comments = await commentRepository.GetManyAsync();
+
+            if (PostId.HasValue)
+            {
+                comments = comments.Where(c => c.PostId == PostId.Value);
+            }
+
+            if (UserId.HasValue)
+            {
+                comments = comments.Where(c => c.UserId == UserId.Value);
+            }
+
+            var commentDTOs = comments.Select(c => new CommentDTO
+            {
+                Id = c.Id,
+                Body = c.Body,
+                PostId = c.PostId,
+                UserId = c.UserId
+            }).ToList();
+
+            return Ok(commentDTOs);
         }
-
-        if (UserId.HasValue)
+        catch (Exception ex)
         {
-            comments = comments.Where(c => c.UserId == UserId.Value);
+            return StatusCode(500, ex.Message);
         }
-
-        var commentsList = comments.ToList();
-
-        // Map to DTOs
-        var commentDTOs = commentsList.Select(c => new CommentDTO
-        {
-            Id = c.Id,
-            Body = c.Body,
-            PostId = c.PostId,
-            UserId = c.UserId
-        }).ToList();
-
-        return Results.Ok(commentDTOs);
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IResult> DeleteComment([FromRoute] int id)
+    public async Task<IActionResult> DeleteComment([FromRoute] int id)
     {
-        await commentRepository.DeleteAsync(id);
-        return Results.NoContent();
+        try
+        {
+            var existing = await commentRepository.GetSingleAsync(id);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            await commentRepository.DeleteAsync(id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
     }
 
-    // Delete a comment from a specific post
     [HttpDelete("/posts/{postId}/comments/{commentId}")]
-    public async Task<IResult> DeleteCommentFromPost(
+    public async Task<IActionResult> DeleteCommentFromPost(
         [FromRoute] int postId,
         [FromRoute] int commentId)
     {
-        // Verify post exists
-        var post = await postRepository.GetSingleAsync(postId);
-        if (post == null)
+        try
         {
-            return Results.NotFound($"Post with ID {postId} not found");
-        }
+            var post = await postRepository.GetSingleAsync(postId);
+            if (post == null)
+            {
+                return NotFound($"Post with ID {postId} not found");
+            }
 
-        Comment? comment = await commentRepository.GetSingleAsync(commentId);
-        if (comment == null)
+            Comment? comment = await commentRepository.GetSingleAsync(commentId);
+            if (comment == null)
+            {
+                return NotFound($"Comment with ID {commentId} not found");
+            }
+
+            if (comment.PostId != postId)
+            {
+                return BadRequest($"Comment with ID {commentId} does not belong to post with ID {postId}");
+            }
+
+            await commentRepository.DeleteAsync(commentId);
+            return NoContent();
+        }
+        catch (Exception ex)
         {
-            return Results.NotFound($"Comment with ID {commentId} not found");
+            return StatusCode(500, ex.Message);
         }
-
-        // Verify the comment belongs to this post
-        if (comment.PostId != postId)
-        {
-            return Results.BadRequest($"Comment with ID {commentId} does not belong to post with ID {postId}");
-        }
-
-        await commentRepository.DeleteAsync(commentId);
-        return Results.NoContent();
     }
 }

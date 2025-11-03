@@ -32,7 +32,12 @@ public class UserInMemoryRepository : IUserRepository
 
     public Task UpdateAsync(User user)
     {
-        User? existingUser = users.SingleOrDefault(u => u.Id == user.Id) ?? throw new InvalidOperationException($"User with id '{user.Id}' not found");
+        User? existingUser = users.SingleOrDefault(u => u.Id == user.Id);
+        if (existingUser is null)
+        {
+            return Task.CompletedTask;
+        }
+
         users.Remove(existingUser);
         users.Add(user);
         return Task.CompletedTask;
@@ -40,19 +45,25 @@ public class UserInMemoryRepository : IUserRepository
 
     public Task DeleteAsync(int id)
     {
-        User? userToRemove = users.SingleOrDefault(u => u.Id == id) ?? throw new InvalidOperationException($"User with id '{id}' not found");
+        User? userToRemove = users.SingleOrDefault(u => u.Id == id);
+        if (userToRemove is null)
+        {
+            return Task.CompletedTask;
+        }
+
         users.Remove(userToRemove);
         return Task.CompletedTask;
     }
 
-    public Task<User> GetSingleAsync(int id)
+    public Task<User?> GetSingleAsync(int id)
     {
-        User? user = users.SingleOrDefault(u => u.Id == id) ?? throw new InvalidOperationException($"User with id '{id}' not found");
+        User? user = users.SingleOrDefault(u => u.Id == id);
         return Task.FromResult(user);
     }
 
-    public Task<IQueryable<User>> GetManyAsync()
+    public Task<IEnumerable<User>> GetManyAsync()
     {
-        return Task.FromResult(users.AsQueryable());
+        IEnumerable<User> snapshot = users.ToList();
+        return Task.FromResult(snapshot);
     }
 }

@@ -40,28 +40,38 @@ public class PostInFileRepository : IPostRepository
     public async Task DeleteAsync(int id)
     {
         List<Post> posts = await GetPostsAsync();
-        Post? postToRemove = posts.SingleOrDefault(p => p.Id == id) ?? throw new InvalidOperationException($"Post with id '{id}' not found");
+        Post? postToRemove = posts.SingleOrDefault(p => p.Id == id);
+        if (postToRemove is null)
+        {
+            return;
+        }
+
         posts.Remove(postToRemove);
         await SavePostsAsync(posts);
     }
 
-    public async Task<IQueryable<Post>> GetManyAsync()
+    public async Task<IEnumerable<Post>> GetManyAsync()
     {
         List<Post> posts = await GetPostsAsync();
-        return posts.AsQueryable();
-    }       
+        return posts;
+    }
 
-    public async Task<Post> GetSingleAsync(int id)
+    public async Task<Post?> GetSingleAsync(int id)
     {
         List<Post> posts = await GetPostsAsync();
-        Post? post = posts.SingleOrDefault(p => p.Id == id) ?? throw new InvalidOperationException($"Post with id '{id}' not found");
+        Post? post = posts.SingleOrDefault(p => p.Id == id);
         return post;
     }
 
     public async Task UpdateAsync(Post post)
     {
         List<Post> posts = await GetPostsAsync();
-        Post? existingPost = posts.SingleOrDefault(p => p.Id == post.Id) ?? throw new InvalidOperationException($"Post with id '{post.Id}' not found");
+        Post? existingPost = posts.SingleOrDefault(p => p.Id == post.Id);
+        if (existingPost is null)
+        {
+            return;
+        }
+
         posts.Remove(existingPost);
         posts.Add(post);
         await SavePostsAsync(posts);

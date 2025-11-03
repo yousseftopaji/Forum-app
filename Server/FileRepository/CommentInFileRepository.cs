@@ -41,28 +41,38 @@ public class CommentInFileRepository : ICommentRepository
     public async Task DeleteAsync(int id)
     {
         List<Comment> comments = await GetCommentsAsync();
-        Comment? commentToRemove = comments.SingleOrDefault(c => c.Id == id) ?? throw new InvalidOperationException($"Comment with id '{id}' not found");
+        Comment? commentToRemove = comments.SingleOrDefault(c => c.Id == id);
+        if (commentToRemove is null)
+        {
+            return;
+        }
+
         comments.Remove(commentToRemove);
         await SaveCommentsAsync(comments);
     }
 
-    public async Task<IQueryable<Comment>> GetManyAsync()
+    public async Task<IEnumerable<Comment>> GetManyAsync()
     {
         List<Comment> comments = await GetCommentsAsync();
-        return comments.AsQueryable();
+        return comments;
     }
 
-    public async Task<Comment> GetSingleAsync(int id)
+    public async Task<Comment?> GetSingleAsync(int id)
     {
         List<Comment> comments = await GetCommentsAsync();
-        Comment? comment = comments.SingleOrDefault(c => c.Id == id) ?? throw new InvalidOperationException($"Comment with id '{id}' not found");
+        Comment? comment = comments.SingleOrDefault(c => c.Id == id);
         return comment;
     }
 
     public async Task UpdateAsync(Comment comment)
     {
         List<Comment> comments = await GetCommentsAsync();
-        Comment? existingComment = comments.SingleOrDefault(c => c.Id == comment.Id) ?? throw new InvalidOperationException($"Comment with id '{comment.Id}' not found");
+        Comment? existingComment = comments.SingleOrDefault(c => c.Id == comment.Id);
+        if (existingComment is null)
+        {
+            return;
+        }
+
         comments.Remove(existingComment);
         comments.Add(comment);
         await SaveCommentsAsync(comments);

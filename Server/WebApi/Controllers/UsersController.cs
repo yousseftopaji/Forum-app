@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Mvc;
 using Entities;
 using RepositoryContracts;
 using DTOs.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace WebApi.Controllers;
 
@@ -33,6 +32,7 @@ public class UsersController : ControllerBase
             };
 
             User created = await userRepository.AddAsync(user);
+            //This is what the client should receive (userD)
             UserDTO userDTO = new()
             {
                 Username = created.Username
@@ -43,12 +43,17 @@ public class UsersController : ControllerBase
         {
             return StatusCode(409, ex.Message);
         }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return StatusCode(500, e.Message);
+        }
     }
     private async Task VerifyUsernameIsUnique(string username)
     {
         var users = await userRepository.GetManyAsync();
-        var existingUser = await users
-            .FirstOrDefaultAsync(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+        var existingUser = users
+            .FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
 
         if (existingUser != null)
         {
@@ -58,142 +63,180 @@ public class UsersController : ControllerBase
 
 
     [HttpPatch("{id:int}")]
-    public async Task<IResult> UpdateUser(
+    public async Task<IActionResult> UpdateUser(
         [FromRoute] int id,
         [FromBody] UpdateUserDTO request
     )
     {
-        User? existing = await userRepository.GetSingleAsync(id);
-
-        if (existing == null)
+        try
         {
-            return Results.NotFound();
-        }
+            User? existing = await userRepository.GetSingleAsync(id);
 
-        // Check if username is being changed and verify it's unique
-        if (request.Username != null && !existing.Username.Equals(request.Username, StringComparison.OrdinalIgnoreCase))
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Username) &&
+                !existing.Username.Equals(request.Username, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    await VerifyUsernameIsUnique(request.Username);
+                    existing.Username = request.Username;
+                }
+                catch (ArgumentException ex)
+                {
+                    return Conflict(ex.Message);
+                }
+            }
+
+            existing.Password = request.Password ?? existing.Password;
+
+            await userRepository.UpdateAsync(existing);
+
+            return NoContent();
+        }
+        catch (Exception ex)
         {
-            try
-            {
-                await VerifyUsernameIsUnique(request.Username);
-                existing.Username = request.Username;
-            }
-            catch (ArgumentException ex)
-            {
-                return Results.Conflict(ex.Message);
-            }
+            return StatusCode(500, ex.Message);
         }
-
-        existing.Password = request.Password ?? existing.Password;
-
-        await userRepository.UpdateAsync(existing);
-
-        return Results.NoContent();
     }
 
     [HttpGet("{id:int}")]
-    public async Task<IResult> GetUserById([FromRoute] int id)
+    public async Task<ActionResult<UserDTO>> GetUserById([FromRoute] int id)
     {
-        User? user = await userRepository.GetSingleAsync(id);
-        if (user == null)
+        try
         {
-            return Results.NotFound();
-        }
+            User? user = await userRepository.GetSingleAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
 
-        // Return DTO without password for security
-        UserDTO userDTO = new()
+            UserDTO userDTO = new()
+            {
+                Id = user.Id,
+                Username = user.Username
+            };
+
+            return Ok(userDTO);
+        }
+        catch (Exception ex)
         {
-            Id = user.Id,
-            Username = user.Username
-        };
-        return Results.Ok(userDTO);
+            return StatusCode(500, ex.Message);
+        }
     }
-    
+
     [HttpGet]
-    public async Task<IResult> GetUsers([FromQuery] string? UsernameContains = null)
+    public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers([FromQuery] string? UsernameContains = null)
     {
-        var users = await userRepository.GetManyAsync();
-
-        if (!string.IsNullOrWhiteSpace(UsernameContains))
+        try
         {
-            users = users.Where(u => u.Username.Contains(UsernameContains, StringComparison.OrdinalIgnoreCase));
+            var users = await userRepository.GetManyAsync();
+
+            if (!string.IsNullOrWhiteSpace(UsernameContains))
+            {
+                users = users.Where(u => u.Username.Contains(UsernameContains, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var userDTOs = users.Select(u => new UserDTO
+            {
+                Id = u.Id,
+                Username = u.Username
+            }).ToList();
+
+            return Ok(userDTOs);
         }
-
-        var userList = await users.ToListAsync();
-
-        // Map to DTOs without passwords for security
-        var userDTOs = userList.Select(u => new UserDTO
+        catch (Exception ex)
         {
-            Id = u.Id,
-            Username = u.Username
-        }).ToList();
-
-        return Results.Ok(userDTOs);
+            return StatusCode(500, ex.Message);
+        }
     }
-    
-    // Get posts by a specific user
+
     [HttpGet("{userId:int}/posts")]
-    public async Task<IResult> GetUserPosts([FromRoute] int userId)
+    public async Task<ActionResult<IEnumerable<PostDTO>>> GetUserPosts([FromRoute] int userId)
     {
-        // Check if user exists
-        var user = await userRepository.GetSingleAsync(userId);
-        if (user == null)
+        try
         {
-            return Results.NotFound($"User with ID {userId} not found");
+            var user = await userRepository.GetSingleAsync(userId);
+            if (user == null)
+            {
+                return NotFound($"User with ID {userId} not found");
+            }
+
+            var posts = await postRepository.GetManyAsync();
+            var postDTOs = posts
+                .Where(p => p.UserId == userId)
+                .Select(p => new PostDTO
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Body = p.Body,
+                    UserId = p.UserId
+                })
+                .ToList();
+
+            return Ok(postDTOs);
         }
-
-        var postsQuery = await postRepository.GetManyAsync();
-        var posts = await postsQuery
-            .Where(p => p.UserId == userId)
-            .ToListAsync();
-
-        // Map to DTOs
-        var postDTOs = posts.Select(p => new PostDTO
+        catch (Exception ex)
         {
-            Id = p.Id,
-            Title = p.Title,
-            Body = p.Body,
-            UserId = p.UserId
-        }).ToList();
-
-        return Results.Ok(postDTOs);
+            return StatusCode(500, ex.Message);
+        }
     }
 
     [HttpGet("{userId:int}/posts/{postId:int}")]
-    public async Task<IResult> GetUserPost([FromRoute] int userId, [FromRoute] int postId)
+    public async Task<ActionResult<PostDTO>> GetUserPost([FromRoute] int userId, [FromRoute] int postId)
     {
-        // Check if user exists
-        var user = await userRepository.GetSingleAsync(userId);
-        if (user == null)
+        try
         {
-            return Results.NotFound($"User with ID {userId} not found");
+            var user = await userRepository.GetSingleAsync(userId);
+            if (user == null)
+            {
+                return NotFound($"User with ID {userId} not found");
+            }
+
+            var posts = await postRepository.GetManyAsync();
+            var post = posts.FirstOrDefault(p => p.Id == postId && p.UserId == userId);
+
+            if (post == null)
+            {
+                return NotFound($"Post with ID {postId} not found for user {userId}");
+            }
+
+            PostDTO postDTO = new()
+            {
+                Id = post.Id,
+                Title = post.Title,
+                Body = post.Body,
+                UserId = post.UserId
+            };
+
+            return Ok(postDTO);
         }
-
-        var postsQuery = await postRepository.GetManyAsync();
-        var post = await postsQuery
-            .FirstOrDefaultAsync(p => p.Id == postId && p.UserId == userId);
-
-        if (post == null)
+        catch (Exception ex)
         {
-            return Results.NotFound($"Post with ID {postId} not found for user {userId}");
+            return StatusCode(500, ex.Message);
         }
-
-        // Map to DTO
-        PostDTO postDTO = new()
-        {
-            Id = post.Id,
-            Title = post.Title,
-            Body = post.Body,
-            UserId = post.UserId
-        };
-
-        return Results.Ok(postDTO);
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IResult> DeleteUser([FromRoute] int id)
+    public async Task<IActionResult> DeleteUser([FromRoute] int id)
     {
-        await userRepository.DeleteAsync(id);
-        return Results.NoContent();
+        try
+        {
+            var existing = await userRepository.GetSingleAsync(id);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            await userRepository.DeleteAsync(id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
     }
 }

@@ -40,28 +40,38 @@ public class UserInFileRepository : IUserRepository
     public async Task DeleteAsync(int id)
     {
         List<User> users = await GetUsersAsync();
-        User? userToRemove = users.SingleOrDefault(u => u.Id == id) ?? throw new InvalidOperationException($"User with id '{id}' not found");
+        User? userToRemove = users.SingleOrDefault(u => u.Id == id);
+        if (userToRemove is null)
+        {
+            return;
+        }
+
         users.Remove(userToRemove);
         await SaveUsersAsync(users);
     }
 
-    public async Task<IQueryable<User>> GetManyAsync()
+    public async Task<IEnumerable<User>> GetManyAsync()
     {
         List<User> users = await GetUsersAsync();
-        return users.AsQueryable();
+        return users;
     }
 
-    public async Task<User> GetSingleAsync(int id)
+    public async Task<User?> GetSingleAsync(int id)
     {
         List<User> users = await GetUsersAsync();
-        User? user = users.SingleOrDefault(u => u.Id == id) ?? throw new InvalidOperationException($"User with id '{id}' not found");
+        User? user = users.SingleOrDefault(u => u.Id == id);
         return user;
     }
 
     public async Task UpdateAsync(User user)
     {
         List<User> users = await GetUsersAsync();
-        User? existingUser = users.SingleOrDefault(u => u.Id == user.Id) ?? throw new InvalidOperationException($"User with id '{user.Id}' not found");
+        User? existingUser = users.SingleOrDefault(u => u.Id == user.Id);
+        if (existingUser is null)
+        {
+            return;
+        }
+
         users.Remove(existingUser);
         users.Add(user);
         await SaveUsersAsync(users);
