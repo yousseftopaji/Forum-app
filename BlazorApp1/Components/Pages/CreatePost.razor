@@ -1,0 +1,92 @@
+@using BlazorApp1.Services
+@using DTOs.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject IPostService PostService
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Create a New Post</h4>
+    </div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @errorMessage
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success" role="alert">
+                @successMessage
+            </div>
+        }
+
+        <EditForm Model="CreatePostModel" method="post" OnValidSubmit="AddPost" FormName="createPost" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+            <div class="mb-3">
+                <label for="postTitle" class="form-label">Title</label>
+                <InputText id="postTitle" class="form-control" @bind-Value="CreatePostModel.Title" />
+                <ValidationMessage For="@(() => CreatePostModel.Title)" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="postBody" class="form-label">Body</label>
+                <InputTextArea id="postBody" class="form-control" rows="5" @bind-Value="CreatePostModel.Body" />
+                <ValidationMessage For="@(() => CreatePostModel.Body)" class="text-danger" />
+            </div>
+            <button type="submit" class="btn btn-primary">Create Post</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int UserId { get; set; }
+
+    [Parameter]
+    public EventCallback OnPostCreated { get; set; }
+
+    [SupplyParameterFromForm(FormName = "createPost")]
+    public CreatePostDTO CreatePostModel { get; set; } = new CreatePostDTO
+    {
+        Title = string.Empty,
+        Body = string.Empty,
+        UserId = 0
+    };
+
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override void OnParametersSet()
+    {
+        CreatePostModel.UserId = UserId;
+    }
+
+    private async Task AddPost()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            CreatePostModel.UserId = UserId;
+            await PostService.AddPostAsync(CreatePostModel);
+            successMessage = "Post created successfully!";
+
+            // Reset form
+            CreatePostModel = new CreatePostDTO
+            {
+                Title = string.Empty,
+                Body = string.Empty,
+                UserId = UserId
+            };
+
+            // Notify parent component
+            await OnPostCreated.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

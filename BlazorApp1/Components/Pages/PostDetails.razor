@@ -1,0 +1,127 @@
+@page "/posts/{postId:int}"
+@using BlazorApp1.Services
+@using DTOs.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject IPostService PostService
+@inject ICommentService CommentService
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Post Details</PageTitle>
+
+@if (post == null)
+{
+    <p>Loading post...</p>
+}
+else
+{
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/users">Users</a></li>
+                @if (user != null)
+                {
+                    <li class="breadcrumb-item"><a href="/users/@post.UserId">@user.Username</a></li>
+                }
+                <li class="breadcrumb-item active" aria-current="page">@post.Title</li>
+            </ol>
+        </nav>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>@post.Title</h2>
+                @if (user != null)
+                {
+                    <small class="text-muted">Posted by <a href="/users/@post.UserId">@user.Username</a></small>
+                }
+            </div>
+            <div class="card-body">
+                <p class="card-text">@post.Body</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <h3>Comments (@(comments?.Count ?? 0))</h3>
+        <hr />
+
+        @if (comments == null)
+        {
+            <p>Loading comments...</p>
+        }
+        else if (comments.Count == 0)
+        {
+            <div class="alert alert-info">
+                No comments yet. Be the first to comment!
+            </div>
+        }
+        else
+        {
+            <div class="list-group mb-3">
+                @foreach (var comment in comments)
+                {
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <small class="text-muted">User ID: @comment.UserId</small>
+                        </div>
+                        <p class="mb-1">@comment.Body</p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <CreateComment PostId="@PostId" OnCommentCreated="HandleCommentCreated" />
+}
+
+@if (!string.IsNullOrEmpty(errorMessage) && post == null)
+{
+    <div class="alert alert-danger mt-3" role="alert">
+        @errorMessage
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int PostId { get; set; }
+
+    private PostDTO? post;
+    private UserDTO? user;
+    private List<CommentDTO>? comments;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPostData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadPostData();
+    }
+
+    private async Task LoadPostData()
+    {
+        try
+        {
+            errorMessage = null;
+            post = await PostService.GetPostByIdAsync(PostId);
+
+            if (post != null)
+            {
+                user = await UserService.GetUserByIdAsync(post.UserId);
+                comments = await PostService.GetPostCommentsAsync(PostId);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandleCommentCreated()
+    {
+        // Refresh comments
+        comments = await PostService.GetPostCommentsAsync(PostId);
+    }
+}

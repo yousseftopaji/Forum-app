@@ -1,1 +1,1 @@
-[{"Id":2,"Body":"This is a comment from user 2 on post 1.","UserId":2,"PostId":1},{"Id":3,"Body":"","UserId":2,"PostId":1}]
+[{"Id":2,"Body":"This is a comment from user 2 on post 1.","UserId":2,"PostId":1},{"Id":3,"Body":"","UserId":2,"PostId":1},{"Id":4,"Body":"New comment, made by me!","UserId":2,"PostId":2}]

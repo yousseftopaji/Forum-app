@@ -1,0 +1,78 @@
+@using BlazorApp1.Services
+@using DTOs.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject IUserService UserService
+
+<h3>Create a new user</h3>
+<div class="row">
+    <div class="col-md-4">
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @errorMessage
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success" role="alert">
+                @successMessage
+            </div>
+        }
+        <EditForm Model="CreateUserModel" method="post" OnValidSubmit="AddUser" FormName="createUser" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <InputText id="username" class="form-control" @bind-Value="CreateUserModel.Username" />
+                <ValidationMessage For="@(() => CreateUserModel.Username)" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText id="password" type="password" class="form-control" @bind-Value="CreateUserModel.Password" />
+                <ValidationMessage For="@(() => CreateUserModel.Password)" class="text-danger" />
+            </div>
+            <button type="submit" class="btn btn-primary">Create User</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnUserCreated { get; set; }
+
+    [SupplyParameterFromForm(FormName = "createUser")]
+    public CreateUserDTO CreateUserModel { get; set; } = new CreateUserDTO
+    {
+        Username = string.Empty,
+        Password = string.Empty
+    };
+
+    private string? errorMessage;
+    private string? successMessage;
+
+    private async Task AddUser()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            await UserService.AddUserAsync(CreateUserModel);
+            successMessage = "User created successfully!";
+
+            // Reset form
+            CreateUserModel = new CreateUserDTO
+            {
+                Username = string.Empty,
+                Password = string.Empty
+            };
+
+            // Notify parent component
+            await OnUserCreated.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

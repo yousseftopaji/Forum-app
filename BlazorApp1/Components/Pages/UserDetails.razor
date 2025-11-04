@@ -1,0 +1,101 @@
+@page "/users/{userId:int}"
+@using BlazorApp1.Services
+@using DTOs.Models
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+
+<PageTitle>User Details</PageTitle>
+
+@if (user == null)
+{
+    <p>Loading user...</p>
+}
+else
+{
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/users">Users</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@user.Username</li>
+            </ol>
+        </nav>
+
+        <h2>@user.Username</h2>
+        <hr />
+    </div>
+
+    <h3>Posts by @user.Username</h3>
+
+    @if (posts == null)
+    {
+        <p>Loading posts...</p>
+    }
+    else if (posts.Count == 0)
+    {
+        <div class="alert alert-info">
+            This user hasn't created any posts yet.
+        </div>
+    }
+    else
+    {
+        <div class="list-group mb-4">
+            @foreach (var post in posts)
+            {
+                <a href="/posts/@post.Id" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">@post.Title</h5>
+                    </div>
+                    <p class="mb-1">@post.Body</p>
+                </a>
+            }
+        </div>
+    }
+
+    <CreatePost UserId="@UserId" OnPostCreated="HandlePostCreated" />
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3" role="alert">
+        @errorMessage
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int UserId { get; set; }
+
+    private UserDTO? user;
+    private List<PostDTO>? posts;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadUserData();
+    }
+
+    private async Task LoadUserData()
+    {
+        try
+        {
+            errorMessage = null;
+            user = await UserService.GetUserByIdAsync(UserId);
+            posts = await UserService.GetUserPostsAsync(UserId);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandlePostCreated()
+    {
+        // Refresh the posts list
+        posts = await UserService.GetUserPostsAsync(UserId);
+    }
+}

@@ -1,0 +1,43 @@
+@page "/users"
+@using BlazorApp1.Services
+@using DTOs.Models
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Users</PageTitle>
+
+<h3>Users</h3>
+@if (users == null || users.Count == 0)
+{
+    <p>Loading users...</p>
+}
+else
+{
+    <div class="list-group mb-4">
+        @foreach (var user in users)
+        {
+            <a href="/users/@user.Id" class="list-group-item list-group-item-action">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">@user.Username</h5>
+                </div>
+            </a>
+        }
+    </div>
+}
+
+<CreateUser OnUserCreated="HandleUserCreated" />
+
+@code {
+    private List<UserDTO> users = new List<UserDTO>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await UserService.GetUsersAsync();
+    }
+
+    private async Task HandleUserCreated()
+    {
+        // Refresh the user list
+        users = await UserService.GetUsersAsync();
+    }
+}

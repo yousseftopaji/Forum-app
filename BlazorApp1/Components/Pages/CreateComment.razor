@@ -1,0 +1,92 @@
+@using BlazorApp1.Services
+@using DTOs.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject ICommentService CommentService
+
+<div class="card">
+    <div class="card-header">
+        <h4>Add a Comment</h4>
+    </div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @errorMessage
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success" role="alert">
+                @successMessage
+            </div>
+        }
+
+        <EditForm Model="CreateCommentModel" method="post" OnValidSubmit="AddComment" FormName="createComment" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+            <div class="mb-3">
+                <label for="userId" class="form-label">User ID</label>
+                <InputNumber id="userId" class="form-control" @bind-Value="CreateCommentModel.UserId" />
+                <ValidationMessage For="@(() => CreateCommentModel.UserId)" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label for="commentBody" class="form-label">Comment</label>
+                <InputTextArea id="commentBody" class="form-control" rows="3" @bind-Value="CreateCommentModel.Body" />
+                <ValidationMessage For="@(() => CreateCommentModel.Body)" class="text-danger" />
+            </div>
+            <button type="submit" class="btn btn-primary">Post Comment</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int PostId { get; set; }
+
+    [Parameter]
+    public EventCallback OnCommentCreated { get; set; }
+
+    [SupplyParameterFromForm(FormName = "createComment")]
+    public CreateCommentDTO CreateCommentModel { get; set; } = new CreateCommentDTO
+    {
+        Body = string.Empty,
+        UserId = 0,
+        PostId = 0
+    };
+
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override void OnParametersSet()
+    {
+        CreateCommentModel.PostId = PostId;
+    }
+
+    private async Task AddComment()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            CreateCommentModel.PostId = PostId;
+            await CommentService.AddCommentAsync(CreateCommentModel, PostId);
+            successMessage = "Comment posted successfully!";
+
+            // Reset form
+            CreateCommentModel = new CreateCommentDTO
+            {
+                Body = string.Empty,
+                UserId = 0,
+                PostId = PostId
+            };
+
+            // Notify parent component
+            await OnCommentCreated.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}
