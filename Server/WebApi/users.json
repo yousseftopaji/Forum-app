@@ -1,1 +1,9 @@
-[{"Id":2,"Username":"newuser2","Password":"password123"},{"Id":3,"Username":"testuser","Password":"password123"},{"Id":4,"Username":"johnsmith","Password":"securepass456"},{"Id":5,"Username":"another testuser","Password":"password123"},{"Id":6,"Username":"Youssef","Password":"Youssef@123"},{"Id":7,"Username":"Youssef1","Password":"Youssef@123"},{"Id":8,"Username":"Thea","Password":"Thea@123"}]
+[
+  { "Id": 2, "Username": "newuser2", "Password": "password123" },
+  { "Id": 3, "Username": "testuser", "Password": "password123" },
+  { "Id": 4, "Username": "johnsmith", "Password": "securepass456" },
+  { "Id": 5, "Username": "another testuser", "Password": "password123" },
+  { "Id": 6, "Username": "Youssef", "Password": "Youssef@123" },
+  { "Id": 7, "Username": "Youssef1", "Password": "Youssef@123" },
+  { "Id": 8, "Username": "Thea", "Password": "Thea@123" }
+]
