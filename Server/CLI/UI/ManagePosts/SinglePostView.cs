@@ -18,7 +18,8 @@ public class SinglePostView
 
     public async Task ShowAsync(int postId)
     {
-        var post = _postRepository.GetManyAsync().FirstOrDefault(p => p.Id == postId);
+        var posts = await _postRepository.GetManyAsync();
+        var post = posts.FirstOrDefault(p => p.Id == postId);
         if (post == null)
         {
             Console.WriteLine("Post not found.");
@@ -27,7 +28,8 @@ public class SinglePostView
 
         Console.WriteLine($"Title: {post.Title}");
         Console.WriteLine($"Body: {post.Body}");
-        var comments = _commentRepository.GetManyAsync().Where(c => c.PostId == post.Id);
+        var comments = _commentRepository.GetManyAsync();
+        var filteredComments = comments.Where(c => c.PostId == post.Id);
         Console.WriteLine("Comments:");
         foreach (var comment in comments)
         {

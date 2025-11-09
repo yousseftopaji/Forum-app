@@ -1,6 +1,8 @@
 @page "/users"
 @using BlazorApp1.Services
 @using DTOs.Models
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @inject IUserService UserService
 @inject NavigationManager NavigationManager
 

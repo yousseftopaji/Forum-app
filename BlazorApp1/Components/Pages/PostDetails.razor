@@ -2,6 +2,8 @@
 @using BlazorApp1.Services
 @using DTOs.Models
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @inject IPostService PostService
 @inject ICommentService CommentService
 @inject IUserService UserService

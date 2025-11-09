@@ -1,0 +1,46 @@
+﻿@page "/login"
+@using BlazorApp1.Auth
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager navMgr
+
+
+<h3>Login</h3>
+
+@code {
+    private string? username;
+    private string? password;
+    private string? errorMessage;
+
+    private async Task LoginAsync()
+    {
+        errorMessage = "";
+        try
+        {
+            await ((SimpleAuthProvider)AuthProvider).Login(username!, password!);
+            navMgr.NavigateTo("/");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            errorMessage = $"ERROR: {e.Message}";
+        }
+    }
+}
+
+<AuthorizeView>
+    <NotAuthorized>
+        <h3>Login Required</h3>
+        <label>Username:</label>
+        <input type="text" @bind="username" />
+        <label>Password:</label>
+        <input type="password" @bind="password" />
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p style="color:red">@errorMessage</p>
+        }
+        <button @onclick="LoginAsync">Login</button>
+    </NotAuthorized>
+    <Authorized>
+        <h3>Hello, @(context.User.Identity!.Name)</h3>
+    </Authorized>
+</AuthorizeView>
